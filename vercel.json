@@ -2,15 +2,13 @@
     "version": 2,
     "builds": [
       {
-        "src": "flask_wagner_whitin.py",
+        "src": "app.py",
         "use": "@vercel/python"
       }
     ],
-    "routes": [
-      {
-        "src": "/(.*)",
-        "dest": "app.py"
-      }
-    ]
+    "env": {
+      "PIP_NO_CACHE_DIR": "true"
+    },
+    "buildCommand": "pip install --upgrade -r requirements.txt"
   }
   
