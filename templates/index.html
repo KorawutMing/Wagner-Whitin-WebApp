@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wagner-Whitin Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f8f9fa; }
+        .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #2c3e50; margin-bottom: 10px; }
+        .header p { color: #7f8c8d; }
+        label { margin: 10px 0 5px; display: inline-block; font-weight: bold; color: #34495e; }
+        input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 12px 20px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #2980b9; }
+        .loading { display: none; text-align: center; margin: 20px 0; }
+        .loading p { color: #7f8c8d; }
+        .result-container { margin-top: 30px; }
+        .visualization { margin: 30px 0; text-align: center; }
+        .visualization img { max-width: 100%; height: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 4px; }
+        .tabs { display: flex; margin-bottom: 10px; border-bottom: 1px solid #ddd; }
+        .tab { padding: 10px 20px; cursor: pointer; border: 1px solid transparent; border-radius: 4px 4px 0 0; }
+        .tab.active { background-color: #f8f9fa; border-color: #ddd; border-bottom-color: #f8f9fa; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; color: #2c3e50; }
+        tr:hover { background-color: #f5f5f5; }
+        .order-plan { margin-bottom: 30px; }
+        .error { color: #e74c3c; background-color: #fadbd8; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .info-box { background-color: #e8f4f8; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .info-box h3 { margin-top: 0; color: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Wagner-Whitin Inventory Optimization Model</h1>
+            <p>Enter your demand, ordering cost, unit cost, and holding cost data to compute the optimal inventory plan.</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>About Wagner-Whitin Algorithm</h3>
+            <p>The Wagner-Whitin algorithm is a dynamic programming approach to solve the dynamic lot-sizing problem, finding the optimal ordering policy that minimizes the total cost of meeting demand over a finite planning horizon.</p>
+            <h3>Project Info</h3>
+            <p>This web application is for 2104611 INV ANALYSIS.</p>
+        </div>
+        
+        <form id="dataForm">
+            <label for="D">Demand (D):</label>
+            <input type="text" id="D" name="D" placeholder="e.g. [200, 500, 300]" required>
+
+            <label for="K">Ordering Cost (K):</label>
+            <input type="text" id="K" name="K" placeholder="e.g. [900, 1200, 900]" required>
+
+            <label for="c">Unit Cost (c):</label>
+            <input type="text" id="c" name="c" placeholder="e.g. [300, 200, 300]" required>
+
+            <label for="h">Holding Cost (h):</label>
+            <input type="text" id="h" name="h" placeholder="e.g. [0.5, 0.5, 0.5]" required>
+
+            <button type="submit">Compute Optimal Plan</button>
+        </form>
+
+        <div id="loading" class="loading">
+            <p>Computing optimal inventory plan...</p>
+        </div>
+
+        <div id="result" class="result-container"></div>
+        
+        <div id="visualizations">
+            <div class="tabs">
+                <div class="tab active" data-tab="inventory">Inventory Plan</div>
+                <div class="tab" data-tab="network">Network Graph</div>
+            </div>
+            <div class="tab-content active" id="inventory-tab">
+                <div id="inventory-visualization" class="visualization"></div>
+            </div>
+            <div class="tab-content" id="network-tab">
+                <div id="network-visualization" class="visualization"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and content
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+            });
+        });
+
+        document.getElementById('dataForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('inventory-visualization').innerHTML = '';
+            document.getElementById('network-visualization').innerHTML = '';
+
+            try {
+                const D = JSON.parse(document.getElementById('D').value);
+                const K = JSON.parse(document.getElementById('K').value);
+                const c = JSON.parse(document.getElementById('c').value);
+                const h = JSON.parse(document.getElementById('h').value);
+
+                // Validate input lengths
+                if (![K.length, c.length, h.length].every(len => len === D.length)) {
+                    throw new Error("All input arrays must have the same length");
+                }
+
+                axios.post('/compute', {
+                    D: D,
+                    K: K,
+                    c: c,
+                    h: h
+                })
+                .then(function(response) {
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    if (response.data.error) {
+                        document.getElementById('result').innerHTML = `<div class="error">Error: ${response.data.error}</div>`;
+                        if (response.data.traceback) {
+                            console.error(response.data.traceback);
+                        }
+                    } else {
+                        // Display the results
+                        let resultHTML = `
+                            <h2>Optimization Results</h2>
+                            <p><strong>Minimum Total Cost: </strong>${response.data.min_cost.toFixed(2)}</p>
+                            
+                            <div class="order-plan">
+                                <h3>Optimal Order Plan</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Order in Period</th>
+                                            <th>Quantity</th>
+                                            <th>Covers Demand for Periods</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+                        
+                        response.data.order_plan.forEach(plan => {
+                            resultHTML += `
+                                <tr>
+                                    <td>${plan[0]}</td>
+                                    <td>${plan[2]}</td>
+                                    <td>${plan[0]} to ${plan[1]}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        resultHTML += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                        
+                        document.getElementById('result').innerHTML = resultHTML;
+                        
+                        // Display the visualization
+                        if (response.data.plot) {
+                            document.getElementById('inventory-visualization').innerHTML = `
+                                <h2>Inventory Plan Visualization</h2>
+                                <img src="data:image/png;base64,${response.data.plot}" alt="Inventory Plan Visualization">
+                            `;
+                        }
+                        
+                        // Display the network graph
+                        if (response.data.network_plot) {
+                            document.getElementById('network-visualization').innerHTML = `
+                                <h2>Wagner-Whitin Network Graph</h2>
+                                <img src="data:image/png;base64,${response.data.network_plot}" alt="Wagner-Whitin Network Graph">
+                                <div class="info-box">
+                                    <p>This graph shows the network representation of the Wagner-Whitin problem. The red path highlights the optimal ordering decisions. Each node represents a time period, and edges represent possible ordering decisions.</p>
+                                </div>
+                            `;
+                        }
+                    }
+                })
+                .catch(function(error) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('result').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                });
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('result').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        });
+    </script>
+</body>
+</html>
