@@ -120,7 +120,7 @@ def compute():
                         ha='center')
 
         plt.grid(True, linestyle='--', alpha=0.7)
-        plt.xlabel('Time (months)')
+        plt.xlabel('Time (Start of Month)')
         plt.ylabel('Inventory Level')
         plt.title('Inventory Level Tracking')
         plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
