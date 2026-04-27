@@ -32,6 +32,13 @@ def compute():
         h = data['h']   # Holding cost
 
         n = len(D)
+
+        if type(K) == int:
+            K = [K] * n
+        if type(c) == int:
+            c = [c] * n
+        if type(h) == int:
+            h = [h] * n
         
         # Initialize dynamic programming array
         F = np.full(n + 1, float('inf'))
