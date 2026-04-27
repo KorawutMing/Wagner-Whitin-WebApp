@@ -117,9 +117,9 @@
                 const h = JSON.parse(document.getElementById('h').value);
 
                 // Validate input lengths
-                if (![K.length, c.length, h.length].every(len => len === D.length)) {
-                    throw new Error("All input arrays must have the same length");
-                }
+                // if (![K.length, c.length, h.length].every(len => len === D.length)) {
+                //    throw new Error("All input arrays must have the same length");
+                //}
 
                 axios.post('/compute', {
                     D: D,
