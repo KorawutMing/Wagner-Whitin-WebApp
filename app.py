@@ -33,11 +33,11 @@ def compute():
 
         n = len(D)
 
-        if type(K) == int:
+        if type(K) != list:
             K = [K] * n
-        if type(c) == int:
+        if type(c) != list:
             c = [c] * n
-        if type(h) == int:
+        if type(h) != list:
             h = [h] * n
         
         # Initialize dynamic programming array
